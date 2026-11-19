@@ -27,11 +27,14 @@ namespace StudyMate.Core.Companion
         public bool IsSessionActive => State != CompanionState.Idle;
         public bool IsPresent => present;
 
-        /// <summary>상태가 바뀌었다. (이전 상태, 새 상태)</summary>
-        public event Action<CompanionState, CompanionState> StateChanged;
-        public event Action SessionStarted;
-        public event Action<SessionEndReason> SessionEnded;
-        public event Action<RestReason> RestStarted;
+        /// <summary>상태가 바뀌었다. 바뀐 시각이 함께 온다.</summary>
+        public event Action<StateChange> StateChanged;
+        /// <summary>세션이 시작됐다. (시각)</summary>
+        public event Action<double> SessionStarted;
+        /// <summary>세션이 끝났다. (이유, 시각)</summary>
+        public event Action<SessionEndReason, double> SessionEnded;
+        /// <summary>쉬기에 들어갔다. (이유, 시각)</summary>
+        public event Action<RestReason, double> RestStarted;
 
         /// <summary>지금의 있음/없음이 이어진 시간(초).</summary>
         public double PresenceDuration(double now) => hasSignal ? now - presenceSince : 0;
@@ -59,18 +62,18 @@ namespace StudyMate.Core.Companion
         }
 
         /// <summary>돌아오기 걷기가 끝났다. 화면 쪽(애니메이션)에서 알려 준다.</summary>
-        public void CompleteReturn()
+        public void CompleteReturn(double now)
         {
             if (State == CompanionState.Returning)
-                ChangeState(CompanionState.Together);
+                ChangeState(CompanionState.Together, now);
         }
 
         /// <summary>"오늘은 여기까지" 버튼.</summary>
-        public void EndSession()
+        public void EndSession(double now)
         {
             if (!IsSessionActive) return;
             waitForAbsence = true;
-            FinishSession(SessionEndReason.UserEnded);
+            FinishSession(SessionEndReason.UserEnded, now);
         }
 
         void Evaluate(double now)
@@ -99,8 +102,8 @@ namespace StudyMate.Core.Companion
                     }
                     if (present && held >= rules.presentToTogether)
                     {
-                        ChangeState(CompanionState.Together);
-                        SessionStarted?.Invoke();
+                        ChangeState(CompanionState.Together, now);
+                        SessionStarted?.Invoke(now);
                         return true;
                     }
                     return false;
@@ -109,7 +112,7 @@ namespace StudyMate.Core.Companion
                 case CompanionState.Returning:
                     if (!present && held >= rules.absentToWaiting)
                     {
-                        ChangeState(CompanionState.Waiting);
+                        ChangeState(CompanionState.Waiting, now);
                         return true;
                     }
                     return false;
@@ -117,7 +120,7 @@ namespace StudyMate.Core.Companion
                 case CompanionState.Waiting:
                     if (present && held >= rules.presentToTogether)
                     {
-                        ChangeState(CompanionState.Together);
+                        ChangeState(CompanionState.Together, now);
                         return true;
                     }
                     if (!present && held >= rules.absentToResting)
@@ -130,7 +133,7 @@ namespace StudyMate.Core.Companion
                 case CompanionState.Resting:
                     if (!present && held >= rules.absentToSessionEnd)
                     {
-                        FinishSession(SessionEndReason.LongAbsence);
+                        FinishSession(SessionEndReason.LongAbsence, now);
                         return true;
                     }
                     if (now < restHoldUntil) return false;
@@ -139,7 +142,7 @@ namespace StudyMate.Core.Companion
                     double presentAfterHold = now - Math.Max(presenceSince, restHoldUntil);
                     if (present && presentAfterHold >= rules.presentToTogether)
                     {
-                        ChangeState(CompanionState.Returning);
+                        ChangeState(CompanionState.Returning, now);
                         return true;
                     }
                     return false;
@@ -150,22 +153,37 @@ namespace StudyMate.Core.Companion
         void EnterRest(RestReason reason, double now)
         {
             restHoldUntil = reason == RestReason.BreakAccepted ? now + rules.acceptedRestHold : now;
-            ChangeState(CompanionState.Resting);
-            RestStarted?.Invoke(reason);
+            ChangeState(CompanionState.Resting, now);
+            RestStarted?.Invoke(reason, now);
         }
 
-        void FinishSession(SessionEndReason reason)
+        void FinishSession(SessionEndReason reason, double now)
         {
-            ChangeState(CompanionState.Idle);
-            SessionEnded?.Invoke(reason);
+            ChangeState(CompanionState.Idle, now);
+            SessionEnded?.Invoke(reason, now);
         }
 
-        void ChangeState(CompanionState next)
+        void ChangeState(CompanionState next, double now)
         {
             if (next == State) return;
             var previous = State;
             State = next;
-            StateChanged?.Invoke(previous, next);
+            StateChanged?.Invoke(new StateChange(previous, next, now));
+        }
+    }
+
+    /// <summary>상태 변화 한 건. 세션 기록은 이것만 모아 두고 시간을 나중에 계산한다. (기획서 8.8)</summary>
+    public readonly struct StateChange
+    {
+        public readonly CompanionState From;
+        public readonly CompanionState To;
+        public readonly double Time;
+
+        public StateChange(CompanionState from, CompanionState to, double time)
+        {
+            From = from;
+            To = to;
+            Time = time;
         }
     }
 }
