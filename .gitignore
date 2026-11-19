@@ -1,0 +1,60 @@
+# ===== Unity 프로젝트 (App/) =====
+/App/[Ll]ibrary/
+/App/[Tt]emp/
+/App/[Oo]bj/
+/App/[Bb]uild/
+/App/[Bb]uilds/
+/App/[Ll]ogs/
+/App/[Uu]ser[Ss]ettings/
+/App/[Mm]emoryCaptures/
+/App/[Rr]ecordings/
+
+# IDE가 만드는 파일
+/App/.vs/
+/App/.vscode/
+/App/.idea/
+/App/.gradle/
+/App/.consulo/
+/App/*.csproj
+/App/*.unityproj
+/App/*.sln
+/App/*.slnx
+/App/*.suo
+/App/*.tmp
+/App/*.user
+/App/*.userprefs
+/App/*.pidb
+/App/*.booproj
+/App/*.svd
+/App/*.pdb
+/App/*.mdb
+/App/*.opendb
+/App/*.VC.db
+/App/*.pidb.meta
+/App/*.pdb.meta
+/App/*.mdb.meta
+/App/ExportedObj/
+/App/Assets/Plugins/Editor/JetBrains*
+/App/sysinfo.txt
+/App/crashlytics-build.properties
+
+# 빌드 결과물
+/App/*.apk
+/App/*.aab
+/App/*.app
+/App/*.unitypackage
+/Builds/
+
+# Addressables 빌드 결과 (CDN에 올리는 파일은 git에 넣지 않는다)
+/App/ServerData/
+/App/Assets/StreamingAssets/aa/
+/App/Assets/StreamingAssets/aa.meta
+/App/Assets/AddressableAssetsData/*/*.bin*
+
+# Blender 자동 백업
+*.blend1
+*.blend2
+
+# OS
+.DS_Store
+Thumbs.db
